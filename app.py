@@ -26,10 +26,10 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM warnings")
     if cursor.fetchone()[0] == 0:
         sample_warnings = [
-            ("Nguyễn Văn A", "Quá tải", "8 nhiệm vụ, 3 nhiệm vụ gần đến hạn", "CAO"),
+            ("An", "Quá tải", "8 nhiệm vụ, 3 nhiệm vụ gần đến hạn", "CAO"),
             ("Task-402", "Trễ tiến độ", "Thời hạn: 17:00 hôm nay (Tiến độ: 40%)", "TRUNG BÌNH"),
-            ("Trần Thị B", "Quá tải", "6 nhiệm vụ, Kiểm tra hiệu suất thường xuyên", "TRUNG BÌNH"),
-            ("Lê Văn C", "Hiệu suất thấp", "Tỷ lệ hoàn thành nhiệm vụ dưới 60% tuần qua", "CAO"),
+            ("Bình", "Quá tải", "6 nhiệm vụ, Kiểm tra hiệu suất thường xuyên", "TRUNG BÌNH"),
+            ("Chi", "Hiệu suất thấp", "Tỷ lệ hoàn thành nhiệm vụ dưới 60% tuần qua", "CAO"),
             ("Dự án Marketing Q4", "Rủi roDeadline", "Thiếu nhân sự thiết kế đồ họa trầm trọng", "CAO")
         ]
         cursor.executemany("INSERT INTO warnings (task_name, warning_type, detail, level) VALUES (?, ?, ?, ?)", sample_warnings)
