@@ -3,13 +3,17 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import sqlite3
 
-app = FastAPI(title="HUB AI Workload Optimizer")
+app = FastAPI(
+    title="HUB AI Workload Optimizer - Enterprise Dashboard",
+    description="Hệ thống AI cảnh báo quá tải và phân bổ nhiệm vụ (Human-in-the-Loop)"
+)
 
 DB_NAME = "hub_enterprise.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS warnings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,6 +37,7 @@ def init_db():
     conn.close()
 
 init_db()
+
 class AllocationRequest(BaseModel):
     task_id: str
 
@@ -53,7 +58,8 @@ def get_dashboard_stats():
     warnings = [{"task": r[0], "type": r[1], "detail": r[2], "level": r[3]} for r in rows]
     conn.close()
     return {"warnings": warnings}
-# API Xử lý Prompt AI / RAG Query
+
+# API Xử lý Prompt AI / RAG Query (8.3.1)
 @app.post("/api/ask-rag")
 def ask_rag_ai(req: PromptRequest):
     p = req.prompt.lower()
@@ -111,6 +117,10 @@ def get_enterprise_dashboard():
                     </button>
                     <button onclick="switchTab('ai-suggest')" id="btn-ai-suggest" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-emerald-900/40 transition">
                         <i class="fa-solid fa-robot text-cyan-400"></i><span>Đề xuất AI</span>
+                    </button>
+                    <!-- TAB PROMPT AI MỚI BỔ SUNG -->
+                    <button onclick="switchTab('prompt-ai')" id="btn-prompt-ai" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-emerald-900/40 transition">
+                        <i class="fa-solid fa-comments text-amber-400"></i><span>Prompt AI / RAG</span>
                     </button>
                     <button onclick="switchTab('history')" id="btn-history" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-emerald-900/40 transition">
                         <i class="fa-solid fa-clock-rotate-left"></i><span>Lịch sử</span>
@@ -308,7 +318,44 @@ def get_enterprise_dashboard():
                 </div>
             </div>
 
-            <!-- TAB 6: LỊCH SỬ -->
+            <!-- TAB 6: PROMPT AI / RAG QUERY (ĐÃ BỔ SUNG GIAO DIỆN) -->
+            <div id="tab-prompt-ai" class="tab-content hidden p-8 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-lg text-amber-600 mb-2"><i class="fa-solid fa-comments mr-2"></i> Trợ lý Truy vấn Tri thức RAG & GPT-5 mini</h3>
+                    <p class="text-sm text-slate-600 mb-4">Nhập câu hỏi để truy xuất tài liệu quy định (KB01, KB02, KB03) và SQLite giải trình quyết định AI:</p>
+
+                    <div class="mb-4">
+                        <p class="text-xs font-bold text-slate-700 mb-2">Gợi ý câu hỏi kiểm thử (8.3.1 RAG Testcase):</p>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="setPrompt('Tại sao AI không ưu tiên An thực hiện TASK01 dù An có kỹ năng SEO và Content?')" class="bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs text-slate-700 border">
+                                💡 Tại sao không ưu tiên An cho TASK01?
+                            </button>
+                            <button onclick="setPrompt('Tại sao không chọn NV03 Chi cho TASK02 dù Chi còn Capacity 65%?')" class="bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs text-slate-700 border">
+                                💡 Tại sao không chọn Chi cho TASK02?
+                            </button>
+                            <button onclick="setPrompt('Tại sao TASK05 báo không tìm thấy nhân sự phù hợp?')" class="bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs text-slate-700 border">
+                                💡 Giải trình lỗi ngoại lệ TASK05?
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-2 mb-6">
+                        <input id="promptInput" type="text" placeholder="Gõ câu hỏi cho AI tại đây..." class="flex-1 border p-2.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50">
+                        <button onclick="sendPromptAI()" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg text-xs font-bold transition">Gửi câu hỏi</button>
+                    </div>
+
+                    <div id="ragAnswerBox" class="hidden border rounded-xl p-5 bg-amber-50/30 border-amber-200">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-xs font-bold text-amber-800" id="ragModelTag">Mô hình: GPT-5 mini (RAG Augmented)</span>
+                            <span class="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-semibold" id="ragSources">Nguồn: KB01, KB02, SQLite</span>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm mb-2" id="ragQuestionHeader"></h4>
+                        <div class="bg-white p-4 rounded-lg border text-xs text-slate-700 leading-relaxed" id="ragAnswerContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 7: LỊCH SỬ -->
             <div id="tab-history" class="tab-content hidden p-8">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                     <h3 class="font-bold text-slate-800 mb-4">Lịch sử Phê duyệt từ Manager (Human Decisions)</h3>
@@ -364,12 +411,34 @@ def get_enterprise_dashboard():
                     'projects': ['Quản lý Dự án', 'Tổng quan tiến độ các dự án đang triển khai'],
                     'warnings': ['Trung tâm Cảnh báo', 'Cảnh báo rủi ro quá tải và trễ deadline'],
                     'ai-suggest': ['Gợi ý & Đề xuất AI', 'Mô hình Human-in-the-Loop tối ưu công việc'],
+                    'prompt-ai': ['Prompt AI / RAG Query', 'Truy xuất tri thức KB01, KB02, KB03 & GPT-5 mini'],
                     'history': ['Lịch sử Quyết định', 'Nhật ký phê duyệt và điều chỉnh của Quản lý']
                 };
                 if (titles[tabName]) {
                     document.getElementById('pageTitle').innerText = titles[tabName][0];
                     document.getElementById('pageSubTitle').innerText = titles[tabName][1];
                 }
+            }
+
+            function setPrompt(text) {
+                document.getElementById('promptInput').value = text;
+            }
+
+            async function sendPromptAI() {
+                const prompt = document.getElementById('promptInput').value;
+                if(!prompt) return alert("Vui lòng nhập câu hỏi!");
+
+                const res = await fetch('/api/ask-rag', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                const data = await res.json();
+
+                document.getElementById('ragAnswerBox').classList.remove('hidden');
+                document.getElementById('ragQuestionHeader').innerText = "❓ Câu hỏi: " + data.prompt;
+                document.getElementById('ragAnswerContent').innerText = data.answer;
+                document.getElementById('ragSources').innerText = "Nguồn truy xuất: " + data.retrieved_sources.join(", ");
             }
 
             async function loadDashboardData() {
